@@ -53,21 +53,32 @@ export async function generateAnswer(
   const context = transcriptions.join('\n\n')
 
   const prompt = `
-    Com base no texto fornecido abaixo como contexto, responda a pergunta de forma clara e precisa em português do Brasil.
+Você é um assistente educacional que responde perguntas baseadas no conteúdo de aulas transcritas.
 
-    CONTEXTO:
-    ${context}
+SIGA ESTES PASSOS ANTES DE RESPONDER:
+1. Leia cuidadosamente todo o contexto fornecido
+2. Identifique as informações relevantes para a pergunta
+3. Analise se há informações suficientes no contexto para responder
+4. Se houver informações suficientes, formule uma resposta clara e precisa
+5. Se não houver informações suficientes, informe isso claramente
 
-    PERGUNTA:
-    ${question}
+CONTEXTO DA AULA:
+${context}
 
-     INSTRUÇÕES:
-    - Use apenas informações contidas no contexto enviado;
-    - Se a resposta não for encontrada no contexto, apenas responda que não possui informações suficientes para responder;
-    - Seja objetivo;
-    - Mantenha um tom educativo e profissional;
-    - Cite trechos relevantes do contexto se apropriado;
-    - Se for citar o contexto, utilize o temo "conteúdo da aula";
+PERGUNTA DO ALUNO:
+${question}
+
+INSTRUÇÕES IMPORTANTES:
+- Analise o contexto completo antes de responder
+- Use APENAS informações contidas no contexto fornecido
+- Se a resposta não estiver no contexto, responda: "Não encontrei informações suficientes no conteúdo da aula para responder essa pergunta."
+- Seja objetivo e preciso
+- Mantenha um tom educativo e profissional
+- Quando citar informações do contexto, use a expressão "conteúdo da aula"
+- Não invente ou assuma informações que não estão no contexto
+- Releia sua resposta antes de finalizar para garantir que está correta
+
+Agora, analise o contexto e responda a pergunta do aluno:
   `.trim()
 
   const reponse = await gemini.models.generateContent({
@@ -77,6 +88,11 @@ export async function generateAnswer(
         text: prompt,
       },
     ],
+    config: {
+      temperature: 0.3,
+      topP: 0.95,
+      topK: 40,
+    },
   })
 
   if (!reponse.text) {

@@ -1,10 +1,13 @@
 import { reset, seed } from 'drizzle-seed'
 import { db, sql } from './connection.ts'
-import { schema } from './schema/index.ts'
+import { questions } from './schema/questions.ts'
+import { rooms } from './schema/rooms.ts'
 
-await reset(db, schema)
+// Reset apenas as tabelas que vamos popular
+await reset(db, { rooms, questions })
 
-await seed(db, schema).refine(f => {
+// Seed apenas rooms e questions (audio_chunks tem vector que não é suportado)
+await seed(db, { rooms, questions }).refine(f => {
   return {
     rooms: {
       count: 5,

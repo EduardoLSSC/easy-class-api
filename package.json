@@ -8,7 +8,9 @@
     "dev": "tsx --env-file .env --watch src/server.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:seed": "tsx --env-file .env src/db/seed.ts"
+    "db:seed": "tsx --env-file .env src/db/seed.ts",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack"
   },
   "keywords": [],
   "author": "",

@@ -1,6 +1,5 @@
-name: NodeJS with Webpack
+name: Validar API
 
-# Define quando o robô deve trabalhar
 on:
   push:
     branches: [ "main" ]
@@ -8,28 +7,21 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        # Rodar em várias versões garante que seu código é compatível
-        node-version: [18.x, 20.x, 22.x]
-
     steps:
-      # 1. Baixa o seu código para dentro do servidor do GitHub
-      - name: Checkout repository
+      - name: Baixar o código
         uses: actions/checkout@v4
 
-      # 2. Instala a versão correta do Node.js
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Instalar Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'npm' # Isso faz o processo ficar mais rápido nas próximas vezes
+          node-version: '22.x'
+          cache: 'npm'
 
-      # 3. Instala as dependências e roda o Webpack
-      - name: Install and Build
-        run: |
-          npm ci
-          npm run build
+      - name: Instalar Dependências
+        run: npm ci
+
+      - name: Verificar erros de TypeScript
+        run: npm run typecheck

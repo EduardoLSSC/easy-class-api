@@ -29,6 +29,13 @@
       "when": 1752171731389,
       "tag": "0003_nifty_forgotten_one",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1776368038296,
+      "tag": "0004_new_model",
+      "breakpoints": true
     }
   ]
 }

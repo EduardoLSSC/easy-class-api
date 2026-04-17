@@ -1,28 +1,61 @@
-import { reset, seed } from 'drizzle-seed'
+import bcrypt from 'bcryptjs'
+import { eq } from 'drizzle-orm'
 import { db, sql } from './connection.ts'
-import { questions } from './schema/questions.ts'
-import { rooms } from './schema/rooms.ts'
+import {
+  roles,
+  rooms,
+  userRoles,
+  users,
+} from './schema/index.ts'
 
-// Reset apenas as tabelas que vamos popular
-await reset(db, { rooms, questions })
+export const DEV_USER_ID = '00000000-0000-4000-8000-000000000001'
 
-// Seed apenas rooms e questions (audio_chunks tem vector que não é suportado)
-await seed(db, { rooms, questions }).refine(f => {
-  return {
-    rooms: {
-      count: 5,
-      columns: {
-        name: f.companyName(),
-        description: f.loremIpsum(),
-      },
-    },
-    questions: {
-      count: 20,
-    }
+const devEmail = 'dev@local.test'
+const devPassword = 'dev'
+
+const [existing] = await db
+  .select({ id: users.id })
+  .from(users)
+  .where(eq(users.email, devEmail))
+  .limit(1)
+
+if (!existing) {
+  const passwordHash = await bcrypt.hash(devPassword, 10)
+
+  await db.insert(users).values({
+    id: DEV_USER_ID,
+    name: 'Dev',
+    email: devEmail,
+    passwordHash,
+  })
+
+  let [teacherRole] = await db
+    .select({ id: roles.id })
+    .from(roles)
+    .where(eq(roles.name, 'teacher'))
+    .limit(1)
+
+  if (!teacherRole) {
+    const inserted = await db.insert(roles).values({ name: 'teacher' }).returning()
+    teacherRole = inserted[0]
   }
-})
+
+  if (teacherRole) {
+    await db.insert(userRoles).values({
+      userId: DEV_USER_ID,
+      roleId: teacherRole.id,
+    })
+  }
+
+  await db.insert(rooms).values({
+    ownerId: DEV_USER_ID,
+    name: 'Sala de exemplo',
+    description: 'Criada pelo seed',
+  })
+
+  console.log(`Seed OK. DEFAULT_USER_ID=${DEV_USER_ID} (dev: ${devEmail} / ${devPassword})`)
+} else {
+  console.log('Seed: usuário dev já existe; nada alterado.')
+}
 
 await sql.end()
-
-// biome-ignore lint/suspicious/noConsole: oly used in dev
-console.log('Database seeded')

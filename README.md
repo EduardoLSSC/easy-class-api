@@ -59,7 +59,8 @@ A solução foi projetada para oferecer uma arquitetura simples, eficiente e esc
 ## 📎 Documentação Complementar
 Para uma visão mais detalhada da arquitetura, fluxos e regras de negócio, acesse o material completo no Miro:
 
-🔗 https://miro.com/app/board/uXjVGyTkUWU=/?share_link_id=232020081815  
+ - https://miro.com/app/board/uXjVGyTkUWU=/?share_link_id=232020081815
+ - https://docs.google.com/document/d/1laSaGfuKoz1Q2xHEayjmNcrlhNA2YCNdVEagqpedBxc/edit?usp=sharing 
 
 ---
 

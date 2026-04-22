@@ -11,7 +11,7 @@
 ## 👥 Integrantes do Projeto
 
 <details>
-<summary><strong>👀 Clique para visualizar os integrantes</strong></summary>
+<summary><strong> Clique para ver todos os integrantes</strong></summary>
 
 <br>
 
@@ -50,17 +50,28 @@
 ---
 
 ## 📖 Descrição Geral da Solução
-A **Easy Class API** é uma aplicação desenvolvida com o objetivo de Desenvolver uma aplicação com o objetivo de ajudar estudantes a registrarem suas aulas e tirarem dúvidas de forma eficiente e simples.
 
-A solução foi projetada para oferecer uma arquitetura simples, eficiente e escalável, permitindo a integração com diferentes sistemas e facilitando o gerenciamento de dados acadêmicos.
+A **Easy Class API** é uma plataforma digital desenvolvida para auxiliar estudantes no processo de aprendizagem por meio do uso de inteligência artificial. 
+
+O objetivo da solução é tornar o estudo mais organizado, eficiente e adaptado às necessidades de cada usuário.O sistema permite que o estudante envie conteúdos acadêmicos em formato de texto ou áudio, como transcrições de aulas, que são processados pela inteligência artificial. A partir disso, a plataforma é capaz de gerar resumos, responder perguntas e ajudar na compreensão do conteúdo de forma mais clara.
+
+A aplicação é estruturada em módulos que incluem cadastro e gerenciamento de usuários, interação com a IA, envio e transcrição de áudios, armazenamento de histórico e criação de planos de estudo. Além disso, o sistema mantém o contexto das interações, permitindo que o usuário continue suas dúvidas ao longo do tempo.
+
+A plataforma também auxilia na organização dos estudos ao possibilitar a criação de planos com base nas informações fornecidas pelo usuário, como objetivos e disponibilidade. Do ponto de vista técnico, o sistema utiliza integração com APIs de inteligência artificial e armazenamento de dados para garantir o funcionamento das funcionalidades.
+
+Dessa forma, a Easy Class API se apresenta como uma ferramenta de apoio ao estudo, facilitando a organização do conteúdo e contribuindo para uma melhor compreensão das disciplinas.
 
 ---
 
 ## 📎 Documentação Complementar
-Para uma visão mais detalhada da arquitetura, fluxos e regras de negócio, acesse o material completo no Miro:
+Para uma visão mais detalhada da arquitetura, fluxos, documentação, problema/solução e regras de negócio, acesse o material completo no Miro e da documentação descritiva:
 
- - https://miro.com/app/board/uXjVGyTkUWU=/?share_link_id=232020081815
- - https://docs.google.com/document/d/1laSaGfuKoz1Q2xHEayjmNcrlhNA2YCNdVEagqpedBxc/edit?usp=sharing 
+ - [Link do Miro](https://miro.com/app/board/uXjVGyTkUWU=/?share_link_id=232020081815)
+ - [Link da descrição executiva](https://docs.google.com/document/d/1J-vPfHtJhT3nCbIc--Fy8I2hmcFFZNjOBB1__86omVQ/edit?usp=sharing)
+---
+
+- [x] Transforme sua forma de estudar com a Easy Class
+- [ ] Deixe que seus concorrentes estejam mais preparados que você! 
 
 ---
 

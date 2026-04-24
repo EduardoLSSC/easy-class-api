@@ -1,4 +1,9 @@
-import { GoogleGenAI } from '@google/genai'
+import {
+  createPartFromBase64,
+  createPartFromText,
+  createUserContent,
+  GoogleGenAI,
+} from '@google/genai'
 import { env } from '../env.ts'
 
 const gemini = new GoogleGenAI({
@@ -7,37 +12,78 @@ const gemini = new GoogleGenAI({
 
 const model = 'gemini-2.5-flash'
 
-export async function transcribeAudio(audioAsBase64: string, mimeType: string) {
-  const response = await gemini.models.generateContent({
-    model,
-    contents: [
-      {
-        text: 'Transcreva o áudio para português do Brasil. Seja preciso e natural na transcrição. Mantenha a pontuação adequada e divida o texto em parágrafos quando for apropriado.',
-      },
-      {
-        inlineData: {
-          mimeType,
-          data: audioAsBase64,
-        },
-      },
-    ],
-  })
+const embeddingModel = 'gemini-embedding-001'
+const embeddingDimensions = 768
 
+function normalizeAudioMimeType(raw: string | undefined) {
+  const m = (raw ?? '').trim().toLowerCase()
+  if (!m || m === 'application/octet-stream') {
+    return 'audio/webm'
+  }
+  if (m === 'video/webm' || m.startsWith('video/webm;')) {
+    return 'audio/webm'
+  }
+  return m
+}
+
+function geminiErrorMessage(err: unknown) {
+  if (err && typeof err === 'object' && 'message' in err) {
+    return String((err as { message: string }).message)
+  }
+  return String(err)
+}
+
+export async function transcribeAudio(audioAsBase64: string, mimeType: string) {
+  const mime = normalizeAudioMimeType(mimeType)
+  const contents = createUserContent([
+    createPartFromText(
+      'Transcreva o áudio para português do Brasil. Seja preciso e natural na transcrição. Mantenha a pontuação adequada e divida o texto em parágrafos quando for apropriado.'
+    ),
+    createPartFromBase64(audioAsBase64, mime),
+  ])
+
+  let response
+  try {
+    response = await gemini.models.generateContent({
+      model,
+      contents,
+    })
+  } catch (err) {
+    throw new Error(
+      `Falha na transcrição (Gemini): ${geminiErrorMessage(err)}`
+    )
+  }
+
+  if (response.promptFeedback?.blockReason) {
+    throw new Error(
+      `Transcrição bloqueada (${response.promptFeedback.blockReason}).`
+    )
+  }
   if (!response.text) {
-    throw new Error('Não foi possível converter o áudio.')
+    throw new Error('Não foi possível converter o áudio (resposta vazia).')
   }
 
   return response.text
 }
 
 export async function generateEmbeddings(text: string) {
-  const response = await gemini.models.embedContent({
-    model: 'text-embedding-004',
-    contents: [{ text }],
-    config: {
-      taskType: 'RETRIEVAL_DOCUMENT',
-    },
-  })
+  let response
+  try {
+    response = await gemini.models.embedContent({
+      model: embeddingModel,
+      contents: createUserContent(
+        createPartFromText(text)
+      ),
+      config: {
+        taskType: 'RETRIEVAL_DOCUMENT',
+        outputDimensionality: embeddingDimensions,
+      },
+    })
+  } catch (err) {
+    throw new Error(
+      `Falha nos embeddings (Gemini): ${geminiErrorMessage(err)}`
+    )
+  }
 
   if (!response.embeddings?.[0].values) {
     throw new Error('Não foi possível gerar os embeddings.')

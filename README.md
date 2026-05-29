@@ -112,7 +112,13 @@ npm run db:migrate
 npm run db:seed
 ```
 
-Após o seed, usuário local: **dev@local.test** / **dev**.
+Após o seed, contas locais:
+
+| E-mail | Senha | Papel |
+|--------|-------|--------|
+| **dev@local.test** | **dev** | Professor |
+| **admin@local.test** | **admin** | Administrador |
+| **student@local.test** | **student** | Aluno (exemplo vinculado à sala do dev, se existir) |
 
 ## Rodar em desenvolvimento
 

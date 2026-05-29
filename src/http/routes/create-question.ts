@@ -3,6 +3,7 @@ import type { FastifyPluginCallbackZod } from 'fastify-type-provider-zod'
 import { z } from 'zod/v4'
 import { db } from '../../db/connection.ts'
 import { schema } from '../../db/schema/index.ts'
+import { resolveUserAppRole } from '../../lib/app-role.ts'
 import { authenticate, getUserId } from '../authenticate.ts'
 import { userHasRoomAccess } from '../room-access.ts'
 import { generateAnswer, generateEmbeddings } from '../../services/gemini.ts'
@@ -25,6 +26,13 @@ export const createQuestionRoute: FastifyPluginCallbackZod = (app) => {
       const { roomId } = request.params
       const { question } = request.body
       const userId = getUserId(request)
+
+      const role = await resolveUserAppRole(userId)
+      if (role !== 'student') {
+        return reply
+          .status(403)
+          .send({ error: 'Apenas alunos podem enviar perguntas.' })
+      }
 
       const canAccess = await userHasRoomAccess(userId, roomId)
       if (!canAccess) {

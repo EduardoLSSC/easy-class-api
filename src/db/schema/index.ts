@@ -1,4 +1,6 @@
 import { audioChunks } from './audio-chunks.ts'
+import { audioRoomLinks } from './audio-room-links.ts'
+import { audios } from './audios.ts'
 import { chatMessages } from './chat-messages.ts'
 import { questionContext } from './question-context.ts'
 import { questions } from './questions.ts'
@@ -14,6 +16,8 @@ export const schema = {
   userRoles,
   rooms,
   roomMembers,
+  audios,
+  audioRoomLinks,
   audioChunks,
   questions,
   questionContext,
@@ -21,6 +25,8 @@ export const schema = {
 }
 
 export {
+  audios,
+  audioRoomLinks,
   audioChunks,
   chatMessages,
   questionContext,

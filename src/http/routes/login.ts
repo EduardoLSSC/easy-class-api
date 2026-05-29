@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs'
 import { eq } from 'drizzle-orm'
 import type { FastifyPluginCallbackZod } from 'fastify-type-provider-zod'
 import { z } from 'zod/v4'
+import { resolveUserAppRole } from '../../lib/app-role.ts'
 import { db } from '../../db/connection.ts'
 import { schema } from '../../db/schema/index.ts'
 
@@ -41,6 +42,7 @@ export const loginRoute: FastifyPluginCallbackZod = (app) => {
       }
 
       const token = await reply.jwtSign({ sub: user.id }, { expiresIn: '7d' })
+      const role = await resolveUserAppRole(user.id)
 
       return {
         token,
@@ -48,6 +50,7 @@ export const loginRoute: FastifyPluginCallbackZod = (app) => {
           id: user.id,
           name: user.name,
           email: user.email,
+          role,
         },
       }
     }

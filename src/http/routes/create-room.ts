@@ -1,5 +1,6 @@
 import type { FastifyPluginCallbackZod } from 'fastify-type-provider-zod'
 import { z } from 'zod/v4'
+import { resolveUserAppRole } from '../../lib/app-role.ts'
 import { db } from '../../db/connection.ts'
 import { schema } from '../../db/schema/index.ts'
 import { authenticate, getUserId } from '../authenticate.ts'
@@ -19,6 +20,12 @@ export const createRoomRoute: FastifyPluginCallbackZod = (app) => {
     async (request, reply) => {
       const { name, description } = request.body
       const ownerId = getUserId(request)
+      const role = await resolveUserAppRole(ownerId)
+      if (role !== 'admin') {
+        return reply
+          .status(403)
+          .send({ error: 'Apenas administradores podem criar salas.' })
+      }
 
       const result = await db
         .insert(schema.rooms)

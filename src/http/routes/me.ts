@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
 import type { FastifyPluginCallbackZod } from 'fastify-type-provider-zod'
+import { resolveUserAppRole } from '../../lib/app-role.ts'
 import { db } from '../../db/connection.ts'
 import { schema } from '../../db/schema/index.ts'
 import { authenticate, getUserId } from '../authenticate.ts'
@@ -22,6 +23,8 @@ export const meRoute: FastifyPluginCallbackZod = (app) => {
       return reply.status(404).send({ error: 'Usuário não encontrado.' })
     }
 
-    return { user }
+    const role = await resolveUserAppRole(userId)
+
+    return { user: { ...user, role } }
   })
 }

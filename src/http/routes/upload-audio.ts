@@ -1,12 +1,15 @@
-import { eq, max } from 'drizzle-orm'
 import type { FastifyPluginCallbackZod } from 'fastify-type-provider-zod'
 import { z } from 'zod/v4'
+import { insertLibraryChunkAndSyncRooms } from '../../lib/audio-room-sync.ts'
+import { resolveUserAppRole } from '../../lib/app-role.ts'
 import { db } from '../../db/connection.ts'
 import { schema } from '../../db/schema/index.ts'
 import { authenticate, getUserId } from '../authenticate.ts'
 import { userHasRoomAccess } from '../room-access.ts'
 import { generateEmbeddings, transcribeAudio } from '../../services/gemini.ts'
+import { copyLibraryChunksToRoom, getLibraryChunks } from '../../lib/audio-room-sync.ts'
 
+/** Legado: cria áudio na biblioteca, grava trecho e envia para a sala (sem repetir). */
 export const uploadAudioRoute: FastifyPluginCallbackZod = (app) => {
   app.post(
     '/rooms/:roomId/audio',
@@ -22,48 +25,63 @@ export const uploadAudioRoute: FastifyPluginCallbackZod = (app) => {
       const { roomId } = request.params
       const userId = getUserId(request)
 
+      const role = await resolveUserAppRole(userId)
+      if (role !== 'professor') {
+        return reply
+          .status(403)
+          .send({ error: 'Apenas professores podem enviar áudio.' })
+      }
+
       const canAccess = await userHasRoomAccess(userId, roomId)
       if (!canAccess) {
         return reply.status(403).send({ error: 'Sem acesso a esta sala.' })
       }
 
-      const audio = await request.file()
-
-      if (!audio) {
+      const file = await request.file()
+      if (!file) {
         throw new Error('Audio is required.')
       }
 
-      const audioBuffer = await audio.toBuffer()
-      const audioAsBase64 = audioBuffer.toString('base64')
+      const now = new Date()
+      const defaultName = `Áudio ${now.toLocaleDateString('pt-BR')} ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
 
-      const transcription = await transcribeAudio(audioAsBase64, audio.mimetype)
-      const embeddings = await generateEmbeddings(transcription)
-
-      const [{ m }] = await db
-        .select({ m: max(schema.audioChunks.chunkIndex) })
-        .from(schema.audioChunks)
-        .where(eq(schema.audioChunks.roomId, roomId))
-
-      const chunkIndex = (m ?? -1) + 1
-
-      const result = await db
-        .insert(schema.audioChunks)
+      const [audio] = await db
+        .insert(schema.audios)
         .values({
-          roomId,
-          transcription,
-          embeddings,
-          chunkIndex,
-          source: 'upload',
+          professorId: userId,
+          name: defaultName,
+          createdAt: now,
+          updatedAt: now,
         })
         .returning()
 
-      const chunk = result[0]
-
-      if (!chunk) {
-        throw new Error('Erro ao salvar chunk de áudio')
+      if (!audio) {
+        throw new Error('Erro ao criar áudio.')
       }
 
-      return reply.status(201).send({ chunkId: chunk.id })
+      const audioBuffer = await file.toBuffer()
+      const audioAsBase64 = audioBuffer.toString('base64')
+
+      const transcription = await transcribeAudio(audioAsBase64, file.mimetype)
+      const embeddings = await generateEmbeddings(transcription)
+
+      const chunk = await insertLibraryChunkAndSyncRooms(audio.id, {
+        transcription,
+        embeddings,
+        source: 'upload',
+      })
+
+      const libraryChunks = await getLibraryChunks(audio.id)
+      await db.insert(schema.audioRoomLinks).values({
+        audioId: audio.id,
+        roomId,
+      })
+      await copyLibraryChunksToRoom(audio.id, roomId, libraryChunks)
+
+      return reply.status(201).send({
+        chunkId: chunk.id,
+        audioId: audio.id,
+      })
     }
   )
 }

@@ -5,12 +5,21 @@ import {
   GoogleGenAI,
 } from '@google/genai'
 import { env } from '../env.ts'
+import { logAppError } from '../lib/logger.ts'
+import {
+  friendlyGeminiError,
+  geminiErrorMessage,
+  withGeminiRetry,
+} from '../lib/gemini-errors.ts'
+import {
+  fallbackGeminiModel,
+  primaryGeminiModel,
+  withGeminiModelFallback,
+} from '../lib/gemini-model-fallback.ts'
 
 const gemini = new GoogleGenAI({
   apiKey: env.GEMINI_API_KEY,
 })
-
-const model = 'gemini-2.5-flash'
 
 const embeddingModel = 'gemini-embedding-001'
 const embeddingDimensions = 768
@@ -26,11 +35,59 @@ function normalizeAudioMimeType(raw: string | undefined) {
   return m
 }
 
-function geminiErrorMessage(err: unknown) {
-  if (err && typeof err === 'object' && 'message' in err) {
-    return String((err as { message: string }).message)
+export { geminiErrorMessage, friendlyGeminiError, primaryGeminiModel, fallbackGeminiModel }
+
+export type GeminiHealthResult = {
+  ok: boolean
+  value: string
+  detail: string
+}
+
+export async function checkGeminiHealth(): Promise<GeminiHealthResult> {
+  try {
+    const { modelUsed } = await withGeminiModelFallback(async (model) => {
+      const response = await gemini.models.generateContent({
+        model,
+        contents: createUserContent(
+          createPartFromText('Responda apenas com a palavra ok.')
+        ),
+        config: {
+          maxOutputTokens: 16,
+          temperature: 0,
+        },
+      })
+
+      if (response.promptFeedback?.blockReason) {
+        throw new Error(
+          `Requisição bloqueada: ${response.promptFeedback.blockReason}`
+        )
+      }
+
+      if (!response.text?.trim()) {
+        throw new Error('A API Gemini respondeu vazio no teste de saúde.')
+      }
+
+      return response
+    }, 1)
+
+    const fallbackNote =
+      modelUsed !== primaryGeminiModel
+        ? ` (fallback: ${modelUsed})`
+        : ''
+
+    return {
+      ok: true,
+      value: 'Operacional',
+      detail: `Modelo ${modelUsed}${fallbackNote} respondeu corretamente ao teste.`,
+    }
+  } catch (err) {
+    const { message } = friendlyGeminiError(err)
+    return {
+      ok: false,
+      value: 'Erro',
+      detail: message,
+    }
   }
-  return String(err)
 }
 
 export async function transcribeAudio(audioAsBase64: string, mimeType: string) {
@@ -42,54 +99,59 @@ export async function transcribeAudio(audioAsBase64: string, mimeType: string) {
     createPartFromBase64(audioAsBase64, mime),
   ])
 
-  let response
   try {
-    response = await gemini.models.generateContent({
-      model,
-      contents,
-    })
+    const { result: response, modelUsed } = await withGeminiModelFallback(
+      (model) =>
+        gemini.models.generateContent({
+          model,
+          contents,
+        })
+    )
+
+    if (modelUsed !== primaryGeminiModel) {
+      console.warn(
+        `[gemini] Transcrição concluída com fallback (${modelUsed}).`
+      )
+    }
+
+    if (response.promptFeedback?.blockReason) {
+      throw new Error(
+        `Transcrição bloqueada (${response.promptFeedback.blockReason}).`
+      )
+    }
+    if (!response.text) {
+      throw new Error('Não foi possível converter o áudio (resposta vazia).')
+    }
+
+    return response.text
   } catch (err) {
-    throw new Error(
-      `Falha na transcrição (Gemini): ${geminiErrorMessage(err)}`
-    )
+    logAppError('gemini.transcribeAudio', err, { mimeType: mime })
+    throw err
   }
-
-  if (response.promptFeedback?.blockReason) {
-    throw new Error(
-      `Transcrição bloqueada (${response.promptFeedback.blockReason}).`
-    )
-  }
-  if (!response.text) {
-    throw new Error('Não foi possível converter o áudio (resposta vazia).')
-  }
-
-  return response.text
 }
 
 export async function generateEmbeddings(text: string) {
-  let response
   try {
-    response = await gemini.models.embedContent({
-      model: embeddingModel,
-      contents: createUserContent(
-        createPartFromText(text)
-      ),
-      config: {
-        taskType: 'RETRIEVAL_DOCUMENT',
-        outputDimensionality: embeddingDimensions,
-      },
-    })
-  } catch (err) {
-    throw new Error(
-      `Falha nos embeddings (Gemini): ${geminiErrorMessage(err)}`
+    const response = await withGeminiRetry(() =>
+      gemini.models.embedContent({
+        model: embeddingModel,
+        contents: createUserContent(createPartFromText(text)),
+        config: {
+          taskType: 'RETRIEVAL_DOCUMENT',
+          outputDimensionality: embeddingDimensions,
+        },
+      })
     )
-  }
 
-  if (!response.embeddings?.[0].values) {
-    throw new Error('Não foi possível gerar os embeddings.')
-  }
+    if (!response.embeddings?.[0].values) {
+      throw new Error('Não foi possível gerar os embeddings.')
+    }
 
-  return response.embeddings[0].values
+    return response.embeddings[0].values
+  } catch (err) {
+    logAppError('gemini.generateEmbeddings', err)
+    throw err
+  }
 }
 
 export async function generateAnswer(
@@ -127,23 +189,31 @@ INSTRUÇÕES IMPORTANTES:
 Agora, analise o contexto e responda a pergunta do aluno:
   `.trim()
 
-  const reponse = await gemini.models.generateContent({
-    model,
-    contents: [
-      {
-        text: prompt,
-      },
-    ],
-    config: {
-      temperature: 0.3,
-      topP: 0.95,
-      topK: 40,
-    },
-  })
+  try {
+    const { result: response, modelUsed } = await withGeminiModelFallback(
+      (model) =>
+        gemini.models.generateContent({
+          model,
+          contents: [{ text: prompt }],
+          config: {
+            temperature: 0.3,
+            topP: 0.95,
+            topK: 40,
+          },
+        })
+    )
 
-  if (!reponse.text) {
-    throw new Error('Falha ao gerar resposta pelo Gemini')
+    if (modelUsed !== primaryGeminiModel) {
+      console.warn(`[gemini] Resposta gerada com fallback (${modelUsed}).`)
+    }
+
+    if (!response.text) {
+      throw new Error('Falha ao gerar resposta pelo Gemini')
+    }
+
+    return response.text
+  } catch (err) {
+    logAppError('gemini.generateAnswer', err)
+    throw err
   }
-
-  return reponse.text
 }

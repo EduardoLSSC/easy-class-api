@@ -14,6 +14,7 @@ import {
   logAppError,
   registerProcessErrorHandlers,
 } from './lib/logger.ts'
+import { adminBulkCreateUsersRoute } from './http/routes/admin-bulk-create-users.ts'
 import { adminCreateUserRoute } from './http/routes/admin-create-user.ts'
 import { adminListUsersRoute } from './http/routes/admin-list-users.ts'
 import { adminGeminiHealthRoute } from './http/routes/admin-gemini-health.ts'
@@ -70,6 +71,7 @@ await app.register(uploadAudioRoute)
 await app.register(professorAudiosRoute)
 await app.register(adminListUsersRoute)
 await app.register(adminCreateUserRoute)
+await app.register(adminBulkCreateUsersRoute)
 await app.register(adminUpdateUserRoute)
 await app.register(adminRoomsRoute)
 await app.register(adminPlatformHealthRoute)

@@ -7,14 +7,24 @@ import { schema } from '../../db/schema/index.ts'
 import { resolveUserAppRole } from '../../lib/app-role.ts'
 import { requireAdmin } from '../require-admin.ts'
 
-const bodySchema = z.object({
-  name: z.string().min(1),
-  email: z.string().email(),
-  ra: z.string().min(1),
-  password: z.string().min(4).optional(),
-  role: z.enum(['professor', 'student']),
-  isActive: z.boolean(),
-})
+const bodySchema = z
+  .object({
+    name: z.string().min(1),
+    email: z.string().email(),
+    ra: z.string().min(1).optional(),
+    password: z.string().min(4).optional(),
+    role: z.enum(['professor', 'student']),
+    isActive: z.boolean(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.role === 'professor' && !data.ra?.trim()) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'RP é obrigatório para professor.',
+        path: ['ra'],
+      })
+    }
+  })
 
 export const adminUpdateUserRoute: FastifyPluginCallbackZod = (app) => {
   app.patch(
@@ -31,7 +41,6 @@ export const adminUpdateUserRoute: FastifyPluginCallbackZod = (app) => {
     async (request, reply) => {
       const { userId } = request.params
       const { name, email, ra, password, role, isActive } = request.body
-      const normalizedRa = ra.trim().toUpperCase()
 
       const [target] = await db
         .select({ id: schema.users.id })
@@ -67,19 +76,24 @@ export const adminUpdateUserRoute: FastifyPluginCallbackZod = (app) => {
         return reply.status(409).send({ error: 'E-mail já cadastrado.' })
       }
 
-      const [raTaken] = await db
-        .select({ id: schema.users.id })
-        .from(schema.users)
-        .where(
-          and(eq(schema.users.ra, normalizedRa), ne(schema.users.id, userId))
-        )
-        .limit(1)
-
-      if (raTaken) {
-        return reply.status(409).send({ error: 'RA já cadastrado.' })
-      }
-
       const dbRoleName = role === 'professor' ? 'teacher' : 'student'
+
+      let normalizedRa: string | undefined
+      if (role === 'professor') {
+        normalizedRa = ra!.trim().toUpperCase()
+
+        const [raTaken] = await db
+          .select({ id: schema.users.id })
+          .from(schema.users)
+          .where(
+            and(eq(schema.users.ra, normalizedRa), ne(schema.users.id, userId))
+          )
+          .limit(1)
+
+        if (raTaken) {
+          return reply.status(409).send({ error: 'RP já cadastrado.' })
+        }
+      }
 
       const [newRoleRow] = await db
         .select({ id: schema.roles.id })
@@ -117,14 +131,17 @@ export const adminUpdateUserRoute: FastifyPluginCallbackZod = (app) => {
       const updates: {
         name: string
         email: string
-        ra: string
+        ra?: string
         isActive: boolean
         passwordHash?: string
       } = {
         name,
         email: normalizedEmail,
-        ra: normalizedRa,
         isActive,
+      }
+
+      if (role === 'professor' && normalizedRa) {
+        updates.ra = normalizedRa
       }
 
       if (password) {

@@ -70,13 +70,18 @@ function formatDayLabel(key: string) {
   return day
 }
 
+interface HealthQuery {
+  checkGemini?: string;
+}
+
 export const adminPlatformHealthRoute: FastifyPluginCallbackZod = (app) => {
   app.get(
     '/admin/platform-health',
     { onRequest: [requireAdmin] },
     async (request) => {
+    const query = request.query as { checkGemini?: string }
     const checkGemini =
-      request.query.checkGemini === '1' || request.query.checkGemini === 'true'
+      query.checkGemini === '1' || query.checkGemini === 'true'
     const [
       [{ totalUsers }],
       [{ activeUsers }],

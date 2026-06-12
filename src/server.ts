@@ -46,7 +46,7 @@ await app.register(fastifyJwt, {
 })
 
 await app.register(fastifyCors, {
-  origin: 'http://localhost:5173',
+  origin: '*',
   methods: ['GET', 'HEAD', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 })

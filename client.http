@@ -1,5 +1,5 @@
 # Variables
-@baseUrl = http://localhost:3333
+@baseUrl = http://98.86.107.153:3333
 
 # Health check
 # @name healthCheck

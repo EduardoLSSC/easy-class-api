@@ -46,7 +46,7 @@ await app.register(fastifyJwt, {
 })
 
 await app.register(fastifyCors, {
-  origin: 'http://localhost:5173',
+  origin: '*',
   methods: ['GET', 'HEAD', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 })
@@ -79,7 +79,7 @@ await app.register(adminGeminiHealthRoute)
 
 try {
   await app.listen({ port: env.PORT, host: '0.0.0.0' })
-  app.log.info(`Servidor em http://localhost:${env.PORT} (log level: ${env.LOG_LEVEL})`)
+  app.log.info(`Servidor em http://0.0.0.0:${env.PORT} (log level: ${env.LOG_LEVEL})`)
 } catch (err) {
   logAppError('startup', err)
   process.exit(1)

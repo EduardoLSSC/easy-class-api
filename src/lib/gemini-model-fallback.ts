@@ -7,12 +7,23 @@ import {
 } from './gemini-errors.ts'
 
 export const primaryGeminiModel = env.GEMINI_MODEL
-export const fallbackGeminiModel = env.GEMINI_MODEL_FALLBACK
 
-const contentModels = [
+function parseModelList(raw: string) {
+  return raw
+    .split(',')
+    .map((model) => model.trim())
+    .filter(Boolean)
+}
+
+/** Lista ordenada: principal + fallbacks (sem duplicatas). */
+export const contentGeminiModels = [
   primaryGeminiModel,
-  fallbackGeminiModel,
-].filter((m, i, arr) => arr.indexOf(m) === i)
+  ...parseModelList(env.GEMINI_MODEL_FALLBACK),
+].filter((model, index, list) => list.indexOf(model) === index)
+
+/** Primeiro fallback configurado (compatibilidade). */
+export const fallbackGeminiModel =
+  parseModelList(env.GEMINI_MODEL_FALLBACK)[0] ?? primaryGeminiModel
 
 export async function withGeminiModelFallback<T>(
   run: (model: string) => Promise<T>,
@@ -20,9 +31,9 @@ export async function withGeminiModelFallback<T>(
 ): Promise<{ result: T; modelUsed: string }> {
   let lastErr: unknown
 
-  for (let i = 0; i < contentModels.length; i++) {
-    const model = contentModels[i]!
-    const hasNext = i < contentModels.length - 1
+  for (let i = 0; i < contentGeminiModels.length; i++) {
+    const model = contentGeminiModels[i]!
+    const hasNext = i < contentGeminiModels.length - 1
 
     try {
       const result = await withGeminiRetry(
@@ -42,7 +53,7 @@ export async function withGeminiModelFallback<T>(
       }
 
       console.warn(
-        `[gemini] Modelo ${model} indisponível; tentando fallback ${contentModels[i + 1]}.`
+        `[gemini] Modelo ${model} indisponível; tentando fallback ${contentGeminiModels[i + 1]}.`
       )
     }
   }

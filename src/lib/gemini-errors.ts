@@ -60,7 +60,7 @@ export function friendlyGeminiError(err: unknown): {
   ) {
     return {
       message:
-        'O serviço de IA está sobrecarregado no momento. Aguarde alguns segundos e tente enviar o áudio novamente.',
+        'O serviço de IA está temporariamente indisponível neste modelo (alta demanda no Google). O sistema tenta outros modelos automaticamente; aguarde e tente de novo.',
       statusCode: 503,
       retryable: true,
     }

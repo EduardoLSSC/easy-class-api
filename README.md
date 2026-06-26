@@ -101,6 +101,8 @@ cp .env.example .env
 | `PORT` | Porta HTTP (padrão `3333`) |
 | `DATABASE_URL` | Ex.: `postgresql://docker:docker@localhost:5433/agents` |
 | `GEMINI_API_KEY` | Chave da API Gemini |
+| `GEMINI_MODEL` | Modelo principal (padrão `gemini-3.5-flash`) |
+| `GEMINI_MODEL_FALLBACK` | Fallbacks separados por vírgula se o principal falhar |
 | `JWT_SECRET` | Mínimo **16 caracteres**; use valor forte em produção |
 | `DEFAULT_USER_ID` | (Opcional) UUID para seed / testes |
 
@@ -148,5 +150,5 @@ Por padrão a API aceita origem `http://localhost:5173` (Vite). Para outra URL/p
 ## Problemas comuns
 
 - **5432 ocupada no host** — Use `:5433` na `DATABASE_URL` (como no `.env.example`).
-- **Transcrição / Gemini** — Verifique `GEMINI_API_KEY`, cota e billing no Google AI.
+- **Transcrição / Gemini** — Verifique `GEMINI_API_KEY`, cota e billing no Google AI. Modelos 2.0 foram desligados em jun/2026; use `gemini-3.5-flash` ou `gemini-2.5-flash` (ver [deprecations](https://ai.google.dev/gemini-api/docs/deprecations)).
 - **401 no front** — Confirme `JWT_SECRET`, login e header `Authorization`.

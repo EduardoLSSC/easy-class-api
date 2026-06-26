@@ -8,6 +8,7 @@ const envSchema = z.object({
     GEMINI_MODEL_FALLBACK: z
         .string()
         .default('gemini-2.5-flash,gemini-3.1-flash-lite,gemini-2.5-flash-lite'),
+    CORS_ORIGIN: z.string().default('http://localhost:5173'),
     JWT_SECRET: z.string().min(16),
     DEFAULT_USER_ID: z.string().uuid().optional(),
     LOG_LEVEL: z

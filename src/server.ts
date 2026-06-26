@@ -45,8 +45,12 @@ await app.register(fastifyJwt, {
   secret: env.JWT_SECRET,
 })
 
+const corsOrigins = env.CORS_ORIGIN.split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean)
+
 await app.register(fastifyCors, {
-  origin: '*',
+  origin: corsOrigins,
   methods: ['GET', 'HEAD', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 })
